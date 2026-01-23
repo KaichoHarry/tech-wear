@@ -17,9 +17,26 @@ export default function CreateAccountPage() {
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  // --- パスワードの強度チェックロジック ---
+  const isPasswordValid = 
+    password.length >= 8 && 
+    password.length <= 32 &&
+    /[A-Za-z]/.test(password) &&
+    /\d/.test(password) &&
+    /[@$!%*#?&]/.test(password);
+
+  // フォーム全体の送信可否
+  const canSubmit = isPasswordValid && password === passwordConfirm && email !== '' && !isLoading;
+
   // Handle account creation
   const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // 二重チェック（念のため）
+    if (!isPasswordValid) {
+      alert('Password does not meet the security requirements.');
+      return;
+    }
 
     // 1. Password match validation
     if (password !== passwordConfirm) {
@@ -29,11 +46,9 @@ export default function CreateAccountPage() {
 
     setIsLoading(true);
 
-    // Get backend URL from environment variables
     const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL;
 
     try {
-      // 2. Call backend API for registration
       const response = await fetch(`${BACKEND_URL}/register`, {
         method: 'POST',
         headers: {
@@ -48,16 +63,13 @@ export default function CreateAccountPage() {
       const data = await response.json();
 
       if (response.ok) {
-        // 3. Success case
         alert('Account created successfully! Please log in.');
         router.push('/login');
       } else {
-        // 4. Handle errors from backend (e.g., domain check fail or duplicate email)
         const errorMessage = data.detail || 'Unknown error occurred.';
         alert(`Registration Failed: ${errorMessage}`);
       }
     } catch (error) {
-      // Network errors (e.g., server is not running)
       console.error('Connection Error:', error);
       alert('Network error occurred. Please check if the backend server is running.');
     } finally {
@@ -71,38 +83,32 @@ export default function CreateAccountPage() {
 
   return (
     <div className="relative size-full min-h-screen flex items-center justify-center">
-      {/* Background Image */}
       <LoginPageBackground imageUrl="https://images.unsplash.com/photo-1763824969015-e5d1d6755782?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjbG90aGluZyUyMGJvdXRpcXVlJTIwc2hvcHxlbnwxfHx8fDE3Njg4MDg5MTd8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral" />
 
-      {/* Create Account Form Container */}
       <div className="relative z-10 w-full max-w-md mx-4">
-        {/* Title */}
         <LoginPageTitle 
           title="Tech Wear"
           subtitle="Create Your Account"
         />
 
-        {/* Create Account Form Card */}
         <LoginCard onSubmit={handleCreateAccount}>
-          {/* Email Input */}
           <EmailInput value={email} onChange={setEmail} />
 
-          {/* Password Input */}
           <PasswordInput value={password} onChange={setPassword} />
 
-          {/* Password Confirm Input */}
           <PasswordConfirmInput value={passwordConfirm} onChange={setPasswordConfirm} />
 
-          {/* Create Account Button */}
+          {/* 送信ボタンの制御 */}
           <Button 
             type="submit"
-            disabled={isLoading}
-            className="w-full bg-black hover:bg-gray-800 text-white py-6"
+            disabled={!canSubmit} // 条件を満たさない場合はクリック不可
+            className={`w-full py-6 transition-all ${
+              canSubmit ? 'bg-black hover:bg-gray-800 text-white' : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
           >
             {isLoading ? 'Creating Account...' : 'Create Account'}
           </Button>
 
-          {/* Navigate to Login Button */}
           <Button 
             type="button"
             variant="outline"
